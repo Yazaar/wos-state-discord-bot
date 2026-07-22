@@ -19,6 +19,3 @@ def paged_list(items: list, size: int, page: int):
     end_index = start_index + size
 
     return items[start_index:end_index], last_page
-
-# if __name__ == '__main__':
-#     print(paged_list([1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16], 5, 10))

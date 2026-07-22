@@ -107,7 +107,9 @@ class Sqlite3DB(DatabaseInterface):
                     timestamp INTEGER NOT NULL,
                     discordId TEXT NOT NULL,
                     wosId TEXT NOT NULL,
+                    wosName TEXT,
                     guildId TEXT NOT NULL,
+                    allianceId INTEGER,
                     status TEXT NOT NULL DEFAULT 'active'
                 )
             ''')
@@ -251,7 +253,7 @@ class Sqlite3DB(DatabaseInterface):
 
     async def get_wos_links(
             self,
-            id_: int | None = None, guild_id: str | None = None, discord_id: str | None = None, wos_id: str | None = None,
+            id_: int | None = None, guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None, wos_id: str | None = None,
             status: str | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
         c = None
         try:
@@ -274,6 +276,13 @@ class Sqlite3DB(DatabaseInterface):
             if guild_id:
                 all_values.append(guild_id)
                 where_all_clauses.append('guildId = ?')
+            if alliance_id:
+                if guild_search:
+                    any_values.append(alliance_id)
+                    where_any_clauses.append('allianceId = ?')
+                else:
+                    all_values.append(discord_id)
+                    where_all_clauses.append('discordId = ?')
             if discord_id:
                 if guild_search:
                     any_values.append(discord_id)
@@ -320,33 +329,33 @@ class Sqlite3DB(DatabaseInterface):
                 limit_query = ' LIMIT ?'
                 values.append(limit)
 
-            c.execute(f'SELECT id, timestamp, guildId, discordId, wosId, wosName, status FROM wos_links{where_query}{limit_query}', values)
+            c.execute(f'SELECT id, timestamp, guildId, allianceId, discordId, wosId, wosName, status FROM wos_links{where_query}{limit_query}', values)
             rows = c.fetchall()
             if not rows: return []
-            return [WosLink(row[0], row[1], row[2], row[3], row[4], row[5], row[6]) for row in rows]
+            return [WosLink(row[0], row[1], row[2], row[3], row[4], row[5], row[6], row[7]) for row in rows]
         finally:
             if c: c.close()
 
-    async def register_wos_link(self, guild_id: str, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
+    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
         c = None
         try:
             ts = int(time.time())
             c = self.__con.cursor()
 
             c.execute(
-                'INSERT INTO wos_links(timestamp, guildId, discordId, wosId, wosName) VALUES (?, ?, ?, ?, ?) RETURNING id',
-                (ts, guild_id, discord_id, wos_id, wos_name)
+                'INSERT INTO wos_links(timestamp, guildId, allianceId, discordId, wosId, wosName) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
+                (ts, guild_id, alliance_id, discord_id, wos_id, wos_name)
             )
             row = c.fetchone()
             if not row: raise Exception('Unable to detect registered giftcode')
             self.__con.commit()
-            return WosLink(row[0], ts, guild_id, discord_id, wos_id, wos_name, 'active')
+            return WosLink(row[0], ts, guild_id, alliance_id, discord_id, wos_id, wos_name, 'active')
         finally:
             if c: c.close()
 
     async def update_wos_link(
         self, wos_link: WosLink, timestamp: int | None = None,
-        guild_id: str | None = None, discord_id: str | None = None,
+        guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None,
         wos_id: str | None = None, wos_name: str | None = None,
         status: str | None = None) -> WosLink:
         c = None
@@ -361,6 +370,11 @@ class Sqlite3DB(DatabaseInterface):
                 fields.append('guildId = ?')
                 values.append(guild_id)
                 wos_link.guild_id = guild_id
+            if alliance_id:
+                alliance_id_value = None if alliance_id == -1 else alliance_id
+                fields.append('allianceId = ?')
+                values.append(alliance_id_value)
+                wos_link.alliance_id = alliance_id_value
             if discord_id:
                 fields.append('discordId = ?')
                 values.append(discord_id)
@@ -424,6 +438,7 @@ class Sqlite3DB(DatabaseInterface):
         c = None
         try:
             c = self.__con.cursor()
+            c.execute('UPDATE wos_links SET allianceId = ? WHERE allianceId = ?', (None, alliance.id))
             c.execute('DELETE FROM alliances WHERE id = ?', (alliance.id,))
             self.__con.commit()
         finally:

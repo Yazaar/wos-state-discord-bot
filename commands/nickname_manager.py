@@ -149,7 +149,7 @@ async def set_nickname_on_alliance(client: DiscordClient, interaction: Interacti
 
     try: await member.edit(nick=f'[{alliance_codes}] {link_id.wos_name}')
     except Exception as e:
-        print(str(e))
+        print('Edit nickname error:', str(e))
         await interaction.response.send_message(content='Failed to edit nickname of discord member', ephemeral=True)
         return
 

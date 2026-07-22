@@ -132,7 +132,7 @@ async def release_selected_tnc_draft(client: DiscordClient, interaction: Interac
 
             if last_message.id == message.id: break
     except Exception as e:
-        print(e)
+        print('release_selected_tnc_draft error:', str(e))
 
 
     async for message in target_channel.history(limit=None, oldest_first=True, after=target_prev_ref):

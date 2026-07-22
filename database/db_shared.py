@@ -150,18 +150,18 @@ class DatabaseInterface(ABC):
     @abstractmethod
     async def get_wos_links(
             self,
-            id_: int | None = None, guild_id: str | None = None, discord_id: str | None = None, wos_id: str | None = None,
+            id_: int | None = None, guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None, wos_id: str | None = None,
             status: str | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
         pass
 
     @abstractmethod
-    async def register_wos_link(self, guild_id: str, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
+    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
         pass
 
     @abstractmethod
     async def update_wos_link(
         self, wos_link: WosLink, timestamp: int | None = None,
-        guild_id: str | None = None, discord_id: str | None = None,
+        guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None,
         wos_id: str | None = None, wos_name: str | None = None,
         status: str | None = None) -> WosLink:
         pass

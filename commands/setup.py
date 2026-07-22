@@ -3,11 +3,11 @@ from commands.create_alliance_invite import create_alliance_invite
 from commands.admin_panel import admin_panel
 from commands.nickname_manager import set_all_nicknames, set_nickname
 from commands.remote_wos_link import remote_wos_link
-from commands.wos_link_manager import refresh_link_selector, remove_link_selector
+from commands.wos_link_manager import remove_link_selector
 from discordHandler import DiscordCommandOption
 from services import get_services
 from .giftcode_add import giftcode_add
-from .find_account import find_account, search_wos_account
+from .find_account import find_account
 from discord import Member, Permissions, TextChannel
 
 async def setup():
@@ -26,11 +26,6 @@ async def setup():
         DiscordCommandOption('public', 'Send with the value 1 to make command response public', str, True)
     ], None, find_account)
 
-    await services.discord.add_slash_command('search_wos_account', 'Search for an existing WOS account', [
-        DiscordCommandOption('wos_id', 'WOS id', str, False),
-        DiscordCommandOption('public', 'Send with the value 1 to make command response public', str, True)
-    ], None, search_wos_account)
-
     await services.discord.add_slash_command('create_date_counter', 'Create a message showing the time diff', [
         DiscordCommandOption('target_date', 'Target date in format YYYY-MM-DD', str, False),
         DiscordCommandOption('target_message', 'Edit an existing message from the bot into the age counter', str, True),
@@ -44,10 +39,6 @@ async def setup():
         DiscordCommandOption('public', 'Set to "1" if you want it to be a public message', str, True)
     ], None, get_days_since)
 
-    await services.discord.add_slash_command('refresh_link', 'Refresh a linked WOS account', [
-        DiscordCommandOption('member', 'Member to update if not yourself', Member, True)
-    ], None, refresh_link_selector)
-
     await services.discord.add_slash_command('remove_link', 'Remove a linked WOS account', [
         DiscordCommandOption('member', 'Member to update if not yourself', Member, True)
     ], Permissions(manage_roles=True), remove_link_selector)
@@ -60,7 +51,8 @@ async def setup():
     await services.discord.add_slash_command('remote_wos_link', 'Remotely trigger a WOS link', [
         DiscordCommandOption('member', 'Member to link', Member, False),
         DiscordCommandOption('alliance_code', 'Alliance code', str, False),
-        DiscordCommandOption('wos_account_id', 'WOS account id', str, False)
+        DiscordCommandOption('wos_account_id', 'WOS account id', str, False),
+        DiscordCommandOption('wos_account_name', 'WOS account name', str, False)
     ], Permissions(administrator=True), remote_wos_link)
 
     await services.discord.add_slash_command('set_all_nicknames', 'Set the nickname of all members', [], Permissions(manage_nicknames=True), set_all_nicknames)

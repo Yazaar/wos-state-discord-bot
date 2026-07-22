@@ -1,16 +1,16 @@
 import typing
 from discord import Interaction, InteractionType
 from commands.create_alliance_invite import create_alliance_invite_selected
-from commands.giftcode_add import giftcode_add_solve, giftcode_add, giftcode_add_input 
+from commands.giftcode_add import giftcode_add 
 from commands.admin_panel import create_tncd, manage_alliance_whitelist, manage_alliance_whitelist_add, manage_alliance_whitelist_add_selector, manage_alliance_whitelist_remove, manage_alliance_whitelist_remove_selector, set_gcc_selected, set_gcc_show_selector, set_invite_channel, set_invite_channel_opt, set_jrc_selected, set_jrc_show_selector, set_tncc_selected, set_tncc_show_selector, manage_state_whitelist, manage_state_whitelist_add, manage_state_whitelist_add_selector, manage_state_whitelist_remove, manage_state_whitelist_remove_selector
 from commands.create_age_counter import refresh_age_counter
 from commands.nickname_manager import set_nickname_on_alliance, set_nickname_on_member
-from commands.wos_link_manager import refresh_link_selection, remove_link_selection
+from commands.wos_link_manager import remove_link_selection
 from discordHandler import DiscordClient
 from services import get_services
 from .dashboard import activate_tnc_draft_selector, create_tnc_draft, release_selected_tnc_draft
-from .alliance_request import tnc_alliance_join_req, tnc_alliance_join_request_click, tnc_code_join_click, tnc_invite_code_req, link_wos_acc_yes, link_wos_acc_accept, link_wos_acc_reject
-from .giftcode_redeem import giftcode_redeem_by_click, giftcode_redeem_click, handle_redeem, handle_redeem_captcha_prompt, handle_redeem_finalize
+from .alliance_request import tnc_alliance_join_req, tnc_alliance_join_request_click, tnc_code_join_click, tnc_invite_code_req, link_wos_acc_yes, link_wos_acc_accept, link_wos_acc_reject, tnc_multi_alliance_selector
+from .giftcode_redeem import giftcode_redeem_by_click, giftcode_redeem_click, handle_redeem
 
 async def link_wos_acc_no_handler(client: DiscordClient, interaction: Interaction):
     await interaction.response.send_message('Linking of WOS account cancelled', ephemeral=True)
@@ -22,10 +22,7 @@ component_events: dict[str, typing.Callable[..., typing.Awaitable]] = {
     'button_create_tnc_draft': create_tnc_draft,
     'release-terms-thread': release_selected_tnc_draft,
     'confirm_tnc_release': release_selected_tnc_draft,
-    'gcc.solve': giftcode_add_solve,
     'gcc.refresh': giftcode_add,
-    'giftcode.refresh': handle_redeem,
-    'giftcode.solve': handle_redeem_captcha_prompt,
     'tnc.alliance_join_req': tnc_alliance_join_request_click,
     'tnc.code_join': tnc_code_join_click,
     'link_wos_acc.yes': link_wos_acc_yes,
@@ -51,19 +48,17 @@ component_events: dict[str, typing.Callable[..., typing.Awaitable]] = {
     'cai.alliance_select': create_alliance_invite_selected,
     'link_wos_acc.no': link_wos_acc_no_handler,
     'age_counter.refresh': refresh_age_counter,
-    'refresh_link.account': refresh_link_selection,
     'remove_link.account': remove_link_selection,
     'nickname.set_on_member': set_nickname_on_member,
-    'nickname.set_on_alliance': set_nickname_on_alliance
+    'nickname.set_on_alliance': set_nickname_on_alliance,
+    'tnc_multi_alliance_selector': tnc_multi_alliance_selector
 }
 
 modal_events: dict[str, typing.Callable[..., typing.Awaitable]] = {
-    'gcc.input': giftcode_add_input,
     'tnc_alliance_join_req': tnc_alliance_join_req,
     'tnc_invite_code_req': tnc_invite_code_req,
     'admin_panel.add_state': manage_state_whitelist_add,
-    'admin_panel.add_alliance': manage_alliance_whitelist_add,
-    'giftcode.captcha': handle_redeem_finalize
+    'admin_panel.add_alliance': manage_alliance_whitelist_add
 }
 
 async def handle_event(client: DiscordClient, interaction: Interaction, event_list: dict[str, typing.Callable[..., typing.Awaitable]], event_type: str):

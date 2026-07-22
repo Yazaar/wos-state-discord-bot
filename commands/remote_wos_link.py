@@ -3,7 +3,7 @@ from discordHandler import DiscordClient
 from events.alliance_request import tnc_alliance_join_req
 
 
-async def remote_wos_link(client: DiscordClient, interaction: Interaction, member: Member, alliance_code: str, wos_account_id: str):
+async def remote_wos_link(client: DiscordClient, interaction: Interaction, member: Member, alliance_code: str, wos_account_id: str, wos_account_name: str):
     handler = interaction.user
 
     if not isinstance(handler, Member):
@@ -14,4 +14,4 @@ async def remote_wos_link(client: DiscordClient, interaction: Interaction, membe
         await interaction.response.send_message('You have no permission to trigger this command', ephemeral=True)
         return
 
-    await tnc_alliance_join_req(client, interaction, wos_account_id, alliance_code, member)
+    await tnc_alliance_join_req(client, interaction, wos_account_id, wos_account_name, alliance_code, member)
