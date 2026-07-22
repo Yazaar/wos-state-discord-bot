@@ -32,3 +32,59 @@ With the command `/admin_panel` admins can configure the bot
   - Used to create a dashboard to manage terms and condition drafts, and to publish
 - Set join request category
   - Set the channel category under which it should create text channels used to allow alliances to allow/reject new recruits into the Discord server
+
+## Setup
+### Environment variables
+The environment variables which has to be set up in order to run this application
+
+| Environment variable | Description                                          | Required |
+| -------------------- | ---------------------------------------------------- | -------- |
+| WOSBOT_DISCORD_TOKEN | The Discord token generated from the Discord website | Yes      |
+
+### Get started
+
+#### 1. Install python
+Install python from https://python.org (Python 3.12 used during development but feel free to try other versions!)
+
+#### 2. Set up a virtual environment for Python (optional)
+Either in the wos-state-discord-bot folder, parent folder, or somewhere else fitting, run the following in cmd.exe or another terminal.
+
+This will create a virtual environment for the bot.
+
+```
+python -m venv wosbot
+```
+
+This will activate the environment
+
+Windows Powershell:
+```
+.\wosbot\Scripts\activate.ps1
+```
+
+Cmd (Windows Command Prompt):
+```
+.\wosbot\Scripts\activate.bat
+```
+
+Linux:
+```
+./wosbot/Scripts/activate
+```
+
+#### 3. Install the required external packages for running the bot
+
+Run this in the bot folder
+```
+python -m pip install -r requirements.txt
+```
+
+#### 5. Set the environment variables
+Set the required environment variables. See the environment variables section further up
+
+
+#### 6. Run the bot
+Run this in the bot folder and the bot should go online!
+```
+python main.py
+```
