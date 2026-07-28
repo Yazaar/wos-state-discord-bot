@@ -1,4 +1,5 @@
-from discord import Guild, Member
+import io
+from discord import Guild, Member, File
 from discord.interactions import Interaction
 from discordHandler import DiscordClient
 from models.alliance import Alliance
@@ -122,7 +123,13 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
         if len(unknown_links) == 0: response_text += 'No unknown accounts!\n'
         response_text = response_text.strip()
 
-        await interaction.edit_original_response(content=response_text)
+        if len(response_text) > 2000:
+            file_data = io.BytesIO(response_text.encode('utf-8'))
+            file = File(fp=file_data, filename="output.txt")
+            await interaction.edit_original_response(content='Data too large for text message, see provided file', attachments=[file])
+        else:
+            await interaction.edit_original_response(content=response_text)
+
     except Exception as e:
         print('Unable to handle verify_all_users:', str(e))
 
