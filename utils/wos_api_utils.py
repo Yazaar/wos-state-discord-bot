@@ -1,12 +1,10 @@
-import asyncio
-import random
-import time, hashlib, string
+import time, hashlib, string, random, asyncio
 import aiohttp
 
 def __sign(text: str) -> str:
     return hashlib.md5((text + 'tB87#kPtkxqOS2').encode('utf-8')).hexdigest()
 
-async def redeem_code(player_id: int, giftcode: str, state_number: int):
+async def redeem_code(player_id: int, giftcode: str, state_number: int, retry_nr = 0):
     timestamp = int(time.time())
 
     form = f'cdk={giftcode}&fid={player_id}&kid={state_number}&time={timestamp}'
@@ -33,6 +31,10 @@ async def redeem_code(player_id: int, giftcode: str, state_number: int):
             resp_payload = await resp.json()
 
     if not isinstance(resp_payload, dict): return None
+
+    if resp_payload.get('message', None) == 'Too Many Attempts.' and retry_nr < 6:
+        await asyncio.sleep(15)
+        return await redeem_code(player_id, giftcode, state_number, retry_nr + 1)
 
     resp_msg = resp_payload.get('msg', None)
     if not isinstance(resp_msg, str): return None
