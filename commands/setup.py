@@ -2,7 +2,8 @@ from commands.create_age_counter import create_age_counter, get_days_since
 from commands.create_alliance_invite import create_alliance_invite
 from commands.admin_panel import admin_panel
 from commands.nickname_manager import set_all_nicknames, set_nickname
-from commands.remote_wos_link import remote_wos_link
+from commands.remote_wos_link import clear_wos_link, remote_wos_link
+from commands.verify_account import verify_account, verify_all_users, verify_user
 from commands.wos_link_manager import remove_link_selector
 from discordHandler import DiscordCommandOption
 from services import get_services
@@ -55,4 +56,22 @@ async def setup():
         DiscordCommandOption('wos_account_name', 'WOS account name', str, False)
     ], Permissions(administrator=True), remote_wos_link)
 
+    await services.discord.add_slash_command('clear_wos_link', 'Clear a WOS account link, to allow another Discord user to claim it', [
+        DiscordCommandOption('wos_account_id', 'WOS account id', str, False)
+    ], Permissions(moderate_members=True), clear_wos_link)
+
     await services.discord.add_slash_command('set_all_nicknames', 'Set the nickname of all members', [], Permissions(manage_nicknames=True), set_all_nicknames)
+
+    await services.discord.add_slash_command('verify_user', 'Check if WOS user is in state', [
+        DiscordCommandOption('wos_account_id', 'WOS account id to verify', str, False),
+        DiscordCommandOption('wos_state_number', 'WOS state number to check if part of', str, False),
+    ], Permissions(moderate_members=True), verify_user)
+
+    await services.discord.add_slash_command('verify_account', 'Check if Discord member is in state according to account links', [
+        DiscordCommandOption('member', 'Member to verify', Member, False),
+        DiscordCommandOption('allowed_state_numbers', 'State numbers to allow (1234,5678,9876) otherwise checking according to alliance whitelists', str, True),
+    ], Permissions(moderate_members=True), verify_account)
+
+    await services.discord.add_slash_command('verify_all_users', 'List all current Discord members are still in allowed state', [
+    ], Permissions(moderate_members=True), verify_all_users)
+
