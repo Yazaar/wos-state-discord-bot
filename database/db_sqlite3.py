@@ -254,7 +254,7 @@ class Sqlite3DB(DatabaseInterface):
     async def get_wos_links(
             self,
             id_: int | None = None, guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None, wos_id: str | None = None,
-            status: str | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
+            status: str | list[str] | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
         c = None
         try:
             c = self.__con.cursor()
@@ -299,11 +299,11 @@ class Sqlite3DB(DatabaseInterface):
                     where_all_clauses.append('wosId = ?')
             if status:
                 if guild_search:
-                    any_values.append(status)
-                    where_any_clauses.append('status = ?')
+                    try: where_any_clauses.append(f'status {auto_field(status, any_values)}')
+                    except EmptyFieldException: return []
                 else:
-                    all_values.append(status)
-                    where_all_clauses.append('status = ?')
+                    try: where_all_clauses.append(f'status {auto_field(status, all_values)}')
+                    except EmptyFieldException: return []
             if wos_name:
                 collate = ' COLLATE NOCASE' if 'wos-name-nocase' in mode else ''
                 if guild_search:

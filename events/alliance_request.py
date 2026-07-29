@@ -65,7 +65,7 @@ async def __check_wos_reserved(
         client: DiscordClient, interaction: Interaction, guild: Guild,
         wos_id: str, wos_name: str | None, allow_discord_id: str | None):
     services = get_services()
-    wos_link = await services.database.get_wos_links(guild_id=str(guild.id), wos_id=wos_id, status='active', limit=1)
+    wos_link = await services.database.get_wos_links(guild_id=str(guild.id), wos_id=wos_id, status=['active', 'unlinked'], limit=1)
     wos_link = wos_link[0] if len(wos_link) > 0 else None
 
     if wos_link and wos_link.discord_id != allow_discord_id:
@@ -317,7 +317,7 @@ async def link_wos_acc_yes(client: DiscordClient, interaction: Interaction, req_
 
         result = await services.database.find_latest_join_request(member_id_str, wos_account_id, alliance.id)
 
-        wos_link = await services.database.get_wos_links(guild_id=guild_id, wos_id=wos_account_id, status='active', limit=1)
+        wos_link = await services.database.get_wos_links(guild_id=guild_id, wos_id=wos_account_id, status=['active', 'unlinked'], limit=1)
         wos_link = wos_link[0] if len(wos_link) else None
 
         if wos_link and wos_link.discord_id != member_id_str:

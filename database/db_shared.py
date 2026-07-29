@@ -151,7 +151,7 @@ class DatabaseInterface(ABC):
     async def get_wos_links(
             self,
             id_: int | None = None, guild_id: str | None = None, alliance_id: int | None = None, discord_id: str | None = None, wos_id: str | None = None,
-            status: str | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
+            status: str | list[str] | None = None, limit: int | None = None, wos_name: str | None = None, mode: list[str] = []) -> list[WosLink]:
         pass
 
     @abstractmethod

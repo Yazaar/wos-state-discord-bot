@@ -3,6 +3,7 @@ from discord import Guild, Member, File
 from discord.interactions import Interaction
 from discordHandler import DiscordClient
 from models.alliance import Alliance
+from models.guild_tag import GuildTag
 from models.wos_link import WosLink
 from services import get_services
 from utils.wos_api_utils import test_wos_account
@@ -76,27 +77,35 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
             await interaction.response.send_message('Discord server not detected', ephemeral=True)
             return
 
+        guild_id_str = str(guild.id)
+
         services = get_services()
-        wos_links = await services.database.get_wos_links(guild_id=str(guild.id), status='active')
+        wos_links = await services.database.get_wos_links(guild_id=guild_id_str, status='active')
 
         invalid_links: list[WosLink] = []
-        unknown_links: list[WosLink] = []
 
         alliance_results: dict[int, Alliance] = dict()
+        alliance_role_results: dict[int, GuildTag] = dict()
 
         await interaction.response.send_message('Verifying all users...', ephemeral=True)
 
+        count = 0
         for wos_link in wos_links:
-            try: await guild.fetch_member(int(wos_link.discord_id)) # check if discord id still is in the Discord server
-            except Exception: continue
-            
+            count += 1
+            await interaction.edit_original_response(content=f'Verifying all users... (Handling user #{count})')
+
+            try: wos_link_member = await guild.fetch_member(int(wos_link.discord_id)) # check if discord id still is in the Discord server
+            except Exception:
+                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+                continue
+
             try: wos_user_id = int(wos_link.wos_id)
             except Exception:
-                unknown_links.append(wos_link)
+                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
                 continue
 
             if not wos_link.alliance_id:
-                unknown_links.append(wos_link)
+                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
                 continue
 
             alliance = alliance_results.get(wos_link.alliance_id, None)
@@ -106,8 +115,22 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
                 if alliance: alliance_results[alliance.id] = alliance
 
             if not alliance:
-                unknown_links.append(wos_link)
+                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
                 continue
+
+            alliance_role = alliance_role_results.get(alliance.id, None)
+            if not alliance_role:
+                alliance_role = await services.database.get_guild_tags(guild_id=guild_id_str, space=str(alliance.id), limit=1)
+                alliance_role = alliance_role[0] if len(alliance_role) == 1 else None
+                if alliance_role: alliance_role_results[alliance.id] = alliance_role
+
+            if alliance_role:
+                try: alliance_role_id = int(alliance_role.value)
+                except Exception: alliance_role_id = None
+
+                if alliance_role_id and wos_link_member.get_role(alliance_role_id) is None:
+                    await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+                    continue
 
             is_valid = await test_wos_account(wos_user_id, alliance.state)
 
@@ -117,11 +140,6 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
         response_text = 'Invalid:\n'
         for i in invalid_links: response_text += await create_user_text_line(guild, i, alliance_results)
         if len(invalid_links) == 0: response_text += 'No invalid accounts!\n'
-
-        response_text += '\nUnknown status:\n'
-        for i in unknown_links: response_text += await create_user_text_line(guild, i, alliance_results)
-        if len(unknown_links) == 0: response_text += 'No unknown accounts!\n'
-        response_text = response_text.strip()
 
         if len(response_text) > 2000:
             file_data = io.BytesIO(response_text.encode('utf-8'))
