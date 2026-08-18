@@ -66,7 +66,6 @@ async def load_src_wosrewards():
         ':path': '/giftcodes',
         ':scheme': 'https',
         'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
-        'accept-encoding': 'gzip, deflate, br, zstd',
         'accept-language': 'en;q=0.7,en-US;q=0.6',
         'cache-control': 'no-cache',
         'dnt': '1',
@@ -238,7 +237,9 @@ async def get_giftcode_channels(services: Services):
         guild = services.discord.get_guild(guild_id)
         if not guild: continue
 
-        channel = await guild.fetch_channel(channel_id)
+        try: channel = await guild.fetch_channel(channel_id)
+        except Exception: continue
+
         if not isinstance(channel, TextChannel): continue
         channels.append(channel)
 
@@ -316,7 +317,8 @@ async def process_valid_giftcodes(valid_codes: list[str], current_time: float | 
             for channel in giftcode_channels:
                 view = View()
                 view.add_item(Button(label='⭐ Redeem', custom_id=f'giftcode.redeem::{new_code}'))
-                message = await channel.send(content=new_code, embed=embed, view=view)
+                try: message = await channel.send(content=new_code, embed=embed, view=view)
+                except Exception: continue
                 await services.database.register_giftcode_message(giftcode_entity.id, str(channel.guild.id), str(channel.id), str(message.id))
                 await message.add_reaction('✅')
                 await message.add_reaction('❌')
