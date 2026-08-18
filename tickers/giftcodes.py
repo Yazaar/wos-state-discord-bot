@@ -1,4 +1,4 @@
-import aiohttp, datetime, random, time as time_module
+import aiohttp, datetime, random, time as time_module, re
 from pathlib import Path
 from bs4 import BeautifulSoup, Tag
 from discord import Color, Embed, TextChannel
@@ -60,8 +60,33 @@ def detect_giftcode_wosrewards(tag: Tag, code_type: str):
     return giftcode
 
 async def load_src_wosrewards():
+    headers = {
+        ':authority': 'www.wosrewards.com',
+        ':method': 'GET',
+        ':path': '/giftcodes',
+        ':scheme': 'https',
+        'accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,image/avif,image/webp,image/apng,*/*;q=0.8,application/signed-exchange;v=b3;q=0.7',
+        'accept-encoding': 'gzip, deflate, br, zstd',
+        'accept-language': 'en;q=0.7,en-US;q=0.6',
+        'cache-control': 'no-cache',
+        'dnt': '1',
+        'pragma': 'no-cache',
+        'priority': 'u=0, i',
+        'referer': 'https://www.wosrewards.com/',
+        'sec-ch-ua': '"Not;A=Brand";v="8", "Chromium";v="150", "Google Chrome";v="150"',
+        'sec-ch-ua-mobile': '?0',
+        'sec-ch-ua-platform': '"Windows"',
+        'sec-fetch-dest': 'document',
+        'sec-fetch-mode': 'navigate',
+        'sec-fetch-site': 'same-origin',
+        'sec-fetch-user': '?1',
+        'sec-gpc': '1',
+        'upgrade-insecure-requests': '1',
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/150.0.0.0 Safari/537.36'
+    }
+
     async with aiohttp.ClientSession() as session:
-        async with session.get('https://www.wosrewards.com') as resp:
+        async with session.get('https://www.wosrewards.com/giftcodes', headers=headers) as resp:
             html = await resp.text()
 
     soup = BeautifulSoup(html, "lxml")
@@ -69,17 +94,29 @@ async def load_src_wosrewards():
     valid_giftcodes: list[str] = []
     expired_giftcodes: list[str] = []
 
+    active_codes_title = soup.find('div', string='Active Codes')
+    if active_codes_title:
+        active_codes_wrapper = active_codes_title.find_next('div')
+        if active_codes_wrapper:
+            active_codes_buttons = soup.select('button[data-code]')
+            for active_code_btn in active_codes_buttons:
+                active_code = active_code_btn['data-code'].strip()
+                if active_code: valid_giftcodes.append(active_code)
 
-    svgs = soup.find_all('svg')
-    for svg in svgs:
-        giftcode = detect_giftcode_wosrewards(svg, 'ACTIVE')
-        if giftcode: valid_giftcodes.append(giftcode)
-    for svg in svgs:
-        giftcode = detect_giftcode_wosrewards(svg, 'EXPIRED')
-        if giftcode:
-            expired_giftcodes.append(giftcode)
-            if len(expired_giftcodes) > 9:
-                break
+    done = False
+    for span in soup.select('details > summary > span'):
+        text = span.get_text(strip=True)
+        if re.match(r'\d+ expired codes', text):
+            done = True
+            invalid_codes_wrapper = span.parent.find_next('div')
+            if invalid_codes_wrapper:
+                for invalid_code_element in invalid_codes_wrapper.select('div > div > div > div.line-through'):
+                    invalid_code = invalid_code_element.get_text(strip=True)
+                    expired_giftcodes.append(invalid_code)
+                    if len(expired_giftcodes) > 9:
+                        break
+
+            if done: break
 
     valid_giftcodes.reverse()
     expired_giftcodes.reverse()
