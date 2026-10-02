@@ -5,7 +5,7 @@ from discordHandler import DiscordClient
 from models.alliance import Alliance
 from models.guild_tag import GuildTag
 from models.wos_link import WosLink
-from services import get_services
+from services import Services, get_services
 from utils.wos_api_utils import test_wos_account
 
 async def verify_user(client: DiscordClient, interaction: Interaction, wos_account_id: str, wos_state_number: str):
@@ -82,64 +82,18 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
         services = get_services()
         wos_links = await services.database.get_wos_links(guild_id=guild_id_str, status='active')
 
-        invalid_links: list[WosLink] = []
-
-        alliance_results: dict[int, Alliance] = dict()
-        alliance_role_results: dict[int, GuildTag] = dict()
-
         await interaction.response.send_message('Verifying all users...', ephemeral=True)
+        invalid_links, alliance_results = await step_verify_all_wos_links(interaction, services, guild, wos_links)
 
-        count = 0
-        for wos_link in wos_links:
-            count += 1
-            await interaction.edit_original_response(content=f'Verifying all users... (Handling user #{count})')
+        missing_links = await step_verify_all_missing_wos_links(interaction, guild, wos_links)
 
-            try: wos_link_member = await guild.fetch_member(int(wos_link.discord_id)) # check if discord id still is in the Discord server
-            except Exception:
-                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
-                continue
-
-            try: wos_user_id = int(wos_link.wos_id)
-            except Exception:
-                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
-                continue
-
-            if not wos_link.alliance_id:
-                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
-                continue
-
-            alliance = alliance_results.get(wos_link.alliance_id, None)
-            if not alliance:
-                alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
-                alliance = alliance[0] if len(alliance) == 1 else None
-                if alliance: alliance_results[alliance.id] = alliance
-
-            if not alliance:
-                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
-                continue
-
-            alliance_role = alliance_role_results.get(alliance.id, None)
-            if not alliance_role:
-                alliance_role = await services.database.get_guild_tags(guild_id=guild_id_str, space=str(alliance.id), limit=1)
-                alliance_role = alliance_role[0] if len(alliance_role) == 1 else None
-                if alliance_role: alliance_role_results[alliance.id] = alliance_role
-
-            if alliance_role:
-                try: alliance_role_id = int(alliance_role.value)
-                except Exception: alliance_role_id = None
-
-                if alliance_role_id and wos_link_member.get_role(alliance_role_id) is None:
-                    await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
-                    continue
-
-            is_valid = await test_wos_account(wos_user_id, alliance.state)
-
-            if not is_valid:
-                invalid_links.append(wos_link)
-
-        response_text = 'Invalid:\n'
+        response_text = 'Invalid links:\n'
         for i in invalid_links: response_text += await create_user_text_line(guild, i, alliance_results)
-        if len(invalid_links) == 0: response_text += 'No invalid accounts!\n'
+        if len(invalid_links) == 0: response_text += 'No invalid links!\n'
+
+        response_text += '\nMissing links:\n'
+        for i in missing_links: response_text += f'{i.display_name} ({i.name})\n'
+        if len(missing_links) == 0: response_text += 'No missing links!\n'
 
         if len(response_text) > 2000:
             file_data = io.BytesIO(response_text.encode('utf-8'))
@@ -151,6 +105,74 @@ async def verify_all_users(client: DiscordClient, interaction: Interaction):
     except Exception as e:
         print('Unable to handle verify_all_users:', str(e))
 
+async def step_verify_all_wos_links(interaction: Interaction, services: Services, guild: Guild, wos_links: list[WosLink]) -> tuple[list[WosLink], dict[int, Alliance]]:
+    invalid_links: list[WosLink] = []
+
+    alliance_results: dict[int, Alliance] = dict()
+    alliance_role_results: dict[int, GuildTag] = dict()
+
+    count = 0
+    for wos_link in wos_links:
+        count += 1
+        await interaction.edit_original_response(content=f'Verifying all WOS links... (Handling user #{count})')
+
+        try: wos_link_member = await guild.fetch_member(int(wos_link.discord_id))
+        except Exception:
+            await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+            continue
+
+        try: wos_user_id = int(wos_link.wos_id)
+        except Exception:
+            await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+            continue
+
+        if not wos_link.alliance_id:
+            await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+            continue
+
+        alliance = alliance_results.get(wos_link.alliance_id, None)
+        if not alliance:
+            alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
+            alliance = alliance[0] if len(alliance) == 1 else None
+            if alliance: alliance_results[alliance.id] = alliance
+
+        if not alliance:
+            await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+            continue
+
+        alliance_role = alliance_role_results.get(alliance.id, None)
+        if not alliance_role:
+            alliance_role = await services.database.get_guild_tags(guild_id=guild_id_str, space=str(alliance.id), limit=1)
+            alliance_role = alliance_role[0] if len(alliance_role) == 1 else None
+            if alliance_role: alliance_role_results[alliance.id] = alliance_role
+
+        if alliance_role:
+            try: alliance_role_id = int(alliance_role.value)
+            except Exception: alliance_role_id = None
+
+            if alliance_role_id and wos_link_member.get_role(alliance_role_id) is None:
+                await services.database.update_wos_link(wos_link=wos_link, status='unlinked')
+                continue
+
+        is_valid = await test_wos_account(wos_user_id, alliance.state)
+
+        if not is_valid:
+            invalid_links.append(wos_link)
+
+    return invalid_links, alliance_results
+
+async def step_verify_all_missing_wos_links(interaction: Interaction, guild: Guild, wos_links: list[WosLink]):
+    missing_links: list[Member] = []
+    count = 0
+    async for member in guild.fetch_members(limit=None):
+        count += 1
+        await interaction.edit_original_response(content=f'Verifying all Discord members... (Handling user #{count})')
+        member_id = str(member.id)
+
+        if not any(link.discord_id == member_id for link in wos_links):
+            missing_links.append(member)
+
+    return missing_links
 
 async def create_user_text_line(guild: Guild, wos_link: WosLink, alliance_cache: dict[int, Alliance]):
         alliance_desc = ''
