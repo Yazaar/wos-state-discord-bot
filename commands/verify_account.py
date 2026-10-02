@@ -111,6 +111,8 @@ async def step_verify_all_wos_links(interaction: Interaction, services: Services
     alliance_results: dict[int, Alliance] = dict()
     alliance_role_results: dict[int, GuildTag] = dict()
 
+    guild_id_str = str(guild.id)
+
     count = 0
     for wos_link in wos_links:
         count += 1
