@@ -5,7 +5,7 @@ from discordHandler import DiscordClient
 from discord import ButtonStyle, CategoryChannel, Color, Embed, Interaction, Member, TextChannel
 from discord.ui import View, Button, Select, Modal, TextInput
 import typing
-from .admin_panel_alliance_manage import alliance_create, alliance_remove
+from .admin_panel_alliance_manage import alliance_create, alliance_remove, alliance_update
 
 if typing.TYPE_CHECKING:
     from discord.guild import GuildChannel
@@ -369,13 +369,16 @@ async def manage_alliance_whitelist(client: DiscordClient, interaction: Interact
     auto_close = auto_close_interaction_callback(interaction)
     add_btn = Button(label='Add alliance', style=ButtonStyle.gray, custom_id='admin_panel.add_alliance_selector')
     remove_btn = Button(label='Remove alliance', style=ButtonStyle.gray, custom_id='admin_panel.remove_alliance_selector')
+    update_btn = Button(label='Update alliance', style=ButtonStyle.gray, custom_id='admin_panel.update_alliance_selector')
     add_btn.callback = auto_close
     remove_btn.callback = auto_close
+    update_btn.callback = auto_close
 
     view.add_item(add_btn)
     view.add_item(remove_btn)
+    view.add_item(update_btn)
 
-    await interaction.response.send_message('State management: Select what you would like to do\n\n> Tip: list states by the remove function', view=view, ephemeral=True)
+    await interaction.response.send_message('State management: Select what you would like to do\n\n> Tip: list states by the update function', view=view, ephemeral=True)
 
 async def manage_alliance_whitelist_add_selector(client: DiscordClient, interaction: Interaction):
     modal = Modal(title='Whitelist alliance', custom_id='admin_panel.add_alliance')
@@ -449,6 +452,87 @@ async def manage_alliance_whitelist_remove(client: DiscordClient, interaction: I
         return
 
     await alliance_remove(client, interaction, values[0])
+
+async def manage_alliance_whitelist_update_selector(client: DiscordClient, interaction: Interaction):
+    guild = interaction.guild
+    if not guild:
+        await interaction.response.send_message('Unable to detect the server which this interaction originates from', ephemeral=True)
+        return
+
+    services = get_services()
+    alliance_list = await services.database.get_alliances(guild_id=str(guild.id))
+    alliance_list.sort(key=lambda x: x.code)
+
+    if len(alliance_list) == 0:
+        await interaction.response.send_message('No alliances found', ephemeral=True)
+        return
+    
+    view = View()
+    alliance_selector = Select(custom_id='admin_panel.update_alliance')
+    alliance_selector.callback = auto_close_interaction_callback(interaction)
+    for alliance in alliance_list:
+        alliance_selector.add_option(label=f'[{alliance.code}] {alliance.name} ({alliance.state})', value=str(alliance.id))
+    view.add_item(alliance_selector)
+    await interaction.response.send_message('Select the alliance you would like to update, and then fill the fields you would like to update', view=view, ephemeral=True)
+
+async def manage_alliance_whitelist_update(client: DiscordClient, interaction: Interaction):
+    try:
+        if not isinstance(interaction.data, dict):
+            await interaction.response.send_message('Event data is missing', ephemeral=True)
+            return
+
+        values = interaction.data.get('values', None)
+        if not isinstance(values, list) or len(values) < 1:
+            await interaction.response.send_message('Event data values is missing', ephemeral=True)
+            return
+
+        services = get_services()
+
+        alliance = await services.database.get_alliances(id_=values[0], limit=1)
+        alliance = alliance[0] if len(alliance) == 1 else None
+        if not alliance:
+            await interaction.response.send_message('Alliance not found', ephemeral=True)
+            return
+
+        modal = Modal(title=f'Update [{alliance.code}] {alliance.name} ({alliance.state})', custom_id=f'admin_panel.update_alliance_fields::{alliance.id}')
+
+        code_field = TextInput(label='Code', custom_id='code', required=False)
+        name_field = TextInput(label='Name', custom_id='name', required=False)
+        state_field = TextInput(label='State', custom_id='state', required=False)
+
+        modal.add_item(code_field)
+        modal.add_item(name_field)
+        modal.add_item(state_field)
+        await interaction.response.send_modal(modal)
+
+    except Exception as e:
+        print('Failed to handle manage_alliance_whitelist_update:', str(e))
+
+async def manage_alliance_whitelist_update_fields(client: DiscordClient, interaction: Interaction, alliance_id_str: str):
+    try:
+        if not isinstance(interaction.data, dict):
+            await interaction.response.send_message('Event data is missing', ephemeral=True)
+            return
+
+        components = interaction.data.get('components')
+        if not isinstance(components, list):
+            await interaction.response.send_message('Event data components is missing', ephemeral=True)
+            return
+
+        comp_items = component_array_to_dict(components)
+        code_value = comp_items.get('code', '').strip() or None
+        name_value = comp_items.get('name', '').strip() or None
+        state_value = comp_items.get('state', '').strip() or None
+
+        if isinstance(state_value, str):
+            try: state_value = int(state_value)
+            except Exception:
+                await interaction.response.send_message('State have to be a number', ephemeral=True)
+                return
+
+        await alliance_update(client, interaction, alliance_id_str, code_value, name_value, state_value)
+    except Exception as e:
+        print('Failed to handle manage_alliance_whitelist_update_fields:', str(e))
 
 async def set_invite_channel_opt(client: DiscordClient, interaction: Interaction, page: str = '0'):
     try: page_num = int(page)
