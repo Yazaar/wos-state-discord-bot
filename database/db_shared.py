@@ -99,6 +99,10 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
+    async def update_alliance(self, alliance: Alliance, code: str | None = None, name: str | None = None, state: int | None = None) -> Alliance:
+        pass
+
+    @abstractmethod
     async def register_join_request(self, discord_id: str, discord_username: str, discord_nickname: str, wos_id: str, wos_username: str, wos_alliance_id: int) -> JoinRequest:
         pass
 

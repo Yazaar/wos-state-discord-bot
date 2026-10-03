@@ -456,6 +456,36 @@ class Sqlite3DB(DatabaseInterface):
         finally:
             if c: c.close()
 
+    async def update_alliance(
+            self, alliance: Alliance, code: str | None = None, name: str | None = None, state: int | None = None) -> Alliance:
+        c = None
+        try:
+            fields = []
+            values = []
+            if code:
+                fields.append('code = ?')
+                values.append(code)
+                alliance.code = code
+            if name:
+                fields.append('name = ?')
+                values.append(name)
+                alliance.name = name
+            if state:
+                fields.append('state = ?')
+                values.append(state)
+                alliance.state = state
+
+            if len(values) > 0:
+                values.append(alliance.id)
+                c = self.__con.cursor()
+                field_str = ', '.join(fields)
+                c.execute(f'UPDATE alliances SET {field_str} WHERE id = ?', values)
+                self.__con.commit()
+
+            return alliance
+        finally:
+            if c: c.close()
+
     async def get_alliances(
             self,
             id_: int | list[int] | None = None, code: str | None = None, name: str | None = None, state: int | None = None, guild_id: str | None = None,
