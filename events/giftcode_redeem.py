@@ -1,18 +1,32 @@
 from discord import Interaction, Member
 from discordHandler import DiscordClient
+from models.wos_link import WosLink
 from services import get_services
 from discord.ui import Select, View
 from tickers.giftcodes import process_expired_giftcodes, process_valid_giftcodes
 from utils.discord_utils import auto_close_interaction_callback
 from utils.wos_api_utils import redeem_code
 
-async def handle_redeem(client: DiscordClient, interaction: Interaction, code: str, wos_account_id_str: str):
-    try: wos_account_id = int(wos_account_id_str)
+async def handle_redeem(client: DiscordClient, interaction: Interaction, code: str, wos_link: WosLink):
+    try: wos_account_id = int(wos_link.wos_id)
     except Exception:
         await interaction.response.send_message('The linked WOS account id is of an unexpected format', ephemeral=True)
         return
 
-    result = await redeem_code(wos_account_id, code, 2844)
+    if not wos_link.alliance_id:
+        await interaction.response.send_message('WOS state not linked to WOS account', ephemeral=True)
+        return
+
+    services = get_services()
+
+    alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1, show_softlinks=True)
+    alliance = alliance[0] if len(alliance) == 1 else None
+
+    if not alliance:
+        await interaction.response.send_message('WOS account linked to invalid state', ephemeral=True)
+        return
+
+    result = await redeem_code(wos_account_id, code, alliance.state)
 
     if result == 'used':
         await interaction.response.send_message('Already redeemed', ephemeral=True)
@@ -55,7 +69,7 @@ async def giftcode_redeem_by_click(client: DiscordClient, interaction: Interacti
         await interaction.response.send_message('The selected account does not match any existing accounts', ephemeral=True)
         return
 
-    await handle_redeem(client, interaction, code, wos_link.wos_id)
+    await handle_redeem(client, interaction, code, wos_link)
 
 async def giftcode_redeem_click(client: DiscordClient, interaction: Interaction, code: str):
     member = interaction.user

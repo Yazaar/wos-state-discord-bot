@@ -40,13 +40,17 @@ async def remove_link_selection(client: DiscordClient, interaction: Interaction)
         await interaction.response.send_message('WOS link not found', ephemeral=True)
         return
 
-    services = get_services()
+    alliance = None
+    if wos_link.alliance_id:
+        alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
+        alliance = alliance[0] if len(alliance) == 1 else None
 
     await services.database.update_wos_link(wos_link, status='inactive')
 
     embed = Embed(title='WOS account')
     embed.add_field(name='Name', value=wos_link.wos_name, inline=False)
-    embed.add_field(name='State', value='2844', inline=False)
+    if alliance and alliance.state:
+        embed.add_field(name='State', value=str(alliance.state), inline=False)
 
     await interaction.response.send_message('WOS account unlinked', ephemeral=True, embed=embed)
 
