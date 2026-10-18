@@ -4,7 +4,7 @@ from commands.admin_panel import admin_panel
 from commands.nickname_manager import set_all_nicknames, set_nickname
 from commands.remote_wos_link import clear_wos_link, remote_wos_link
 from commands.verify_account import verify_account, verify_all_users, verify_user
-from commands.wos_link_manager import remove_link_selector
+from commands.wos_link_manager import add_wos_account, remove_link_selector
 from discordHandler import DiscordCommandOption
 from services import get_services
 from .giftcode_add import giftcode_add
@@ -42,7 +42,14 @@ async def setup():
 
     await services.discord.add_slash_command('remove_link', 'Remove a linked WOS account', [
         DiscordCommandOption('member', 'Member to update if not yourself', Member, True)
-    ], Permissions(manage_roles=True), remove_link_selector)
+    ], None, remove_link_selector)
+
+    await services.discord.add_slash_command('add_wos_account', 'Add a WOS account to Discord member account list', [
+        DiscordCommandOption('wos_account_id', 'WOS account id to add', str, False),
+        DiscordCommandOption('wos_account_name', 'Name of the WOS account', str, False),
+        DiscordCommandOption('state_number', 'State number the WOS account is in', str, False),
+        DiscordCommandOption('target_member', 'Member to update if not yourself', Member, True)
+    ], None, add_wos_account)
 
     await services.discord.add_slash_command('set_nickname', 'Set the nickname of a member', [
         DiscordCommandOption('member', 'Member to update if not yourself', Member, True)

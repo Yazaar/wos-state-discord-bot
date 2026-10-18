@@ -69,7 +69,7 @@ async def giftcode_redeem_click(client: DiscordClient, interaction: Interaction,
         return
 
     services = get_services()
-    wos_accounts = await services.database.get_wos_links(guild_id=str(guild.id), discord_id=str(member.id), status='active')
+    wos_accounts = await services.database.get_wos_links(guild_id=str(guild.id), discord_id=str(member.id), status=['active', 'unlinked', 'softlink'])
 
     if len(wos_accounts) == 0:
         await interaction.response.send_message('You have no wos accounts linked', ephemeral=True)

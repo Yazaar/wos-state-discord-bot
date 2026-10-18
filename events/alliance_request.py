@@ -65,8 +65,9 @@ async def __check_wos_reserved(
         client: DiscordClient, interaction: Interaction, guild: Guild,
         wos_id: str, wos_name: str | None, allow_discord_id: str | None):
     services = get_services()
-    wos_link = await services.database.get_wos_links(guild_id=str(guild.id), wos_id=wos_id, status=['active', 'unlinked'], limit=1)
-    wos_link = wos_link[0] if len(wos_link) > 0 else None
+    wos_links = await services.database.get_wos_links(guild_id=str(guild.id), wos_id=wos_id, status=['active', 'unlinked', 'softlink'])
+
+    wos_link = next((x for x in wos_links if x.status in ['active', 'unlinked']), None)
 
     if wos_link and wos_link.discord_id != allow_discord_id:
         try: taken_by_member = guild.get_member(int(wos_link.discord_id))
@@ -76,6 +77,9 @@ async def __check_wos_reserved(
             f'Sorry, unable to link the WOS account {wos_name or wos_link.wos_name} due to how someone else ' +
             f'linked this WOS account previously to {taken_by_sect}. Reach out for help if you believe this is an error', ephemeral=True)
         return True, wos_link, taken_by_member
+
+    if not wos_link and allow_discord_id:
+        wos_link = next((x for x in wos_links if x.status == 'softlink' and x.discord_id == allow_discord_id), None)
 
     return False, wos_link, None
 
