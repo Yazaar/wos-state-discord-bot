@@ -51,7 +51,7 @@ async def verify_account(client: DiscordClient, interaction: Interaction, member
                 if not wos_link.alliance_id: continue
                 alliance_cache = alliance_results.get(wos_link.alliance_id, None)
                 if not alliance_cache:
-                    alliance_cache = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
+                    alliance_cache = await services.database.get_alliances(id_=wos_link.alliance_id, show_softlinks=True, limit=1)
                     alliance_cache = alliance_cache[0] if len(alliance_cache) == 1 else None
                     if alliance_cache: alliance_results[alliance_cache.id] = alliance_cache
 
@@ -134,7 +134,7 @@ async def step_verify_all_wos_links(interaction: Interaction, services: Services
 
         alliance = alliance_results.get(wos_link.alliance_id, None)
         if not alliance:
-            alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
+            alliance = await services.database.get_alliances(id_=wos_link.alliance_id, show_softlinks=True, limit=1)
             alliance = alliance[0] if len(alliance) == 1 else None
             if alliance: alliance_results[alliance.id] = alliance
 

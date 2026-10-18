@@ -7,7 +7,7 @@ from utils.discord_utils import auto_close_interaction_callback
 async def generic_wos_selector(
         client: DiscordClient, interaction: Interaction,
         target_param: Member | None, event_id: str, selector_msg: str,
-        perm_check):
+        perm_check, *, allow_softlink=False):
     guild = interaction.guild
     sender = interaction.user
     target = target_param or interaction.user
@@ -30,8 +30,10 @@ async def generic_wos_selector(
 
     services = get_services()
 
+    allowed_statuses = ['active', 'unlinked', 'softlink'] if allow_softlink else ['active'];
+
     guild_id = str(guild.id)
-    links = await services.database.get_wos_links(guild_id=guild_id, discord_id=str(target.id), status='active')
+    links = await services.database.get_wos_links(guild_id=guild_id, discord_id=str(target.id), status=allowed_statuses)
 
     if len(links) == 0:
         await interaction.response.send_message('No linked accounts found', ephemeral=True)

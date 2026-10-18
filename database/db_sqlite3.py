@@ -336,20 +336,20 @@ class Sqlite3DB(DatabaseInterface):
         finally:
             if c: c.close()
 
-    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
+    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str, *, status='active') -> WosLink:
         c = None
         try:
             ts = int(time.time())
             c = self.__con.cursor()
 
             c.execute(
-                'INSERT INTO wos_links(timestamp, guildId, allianceId, discordId, wosId, wosName) VALUES (?, ?, ?, ?, ?, ?) RETURNING id',
-                (ts, guild_id, alliance_id, discord_id, wos_id, wos_name)
+                'INSERT INTO wos_links(timestamp, guildId, allianceId, discordId, wosId, wosName, status) VALUES (?, ?, ?, ?, ?, ?, ?) RETURNING id',
+                (ts, guild_id, alliance_id, discord_id, wos_id, wos_name, status)
             )
             row = c.fetchone()
-            if not row: raise Exception('Unable to detect registered giftcode')
+            if not row: raise Exception('Unable to detect registered WOS link')
             self.__con.commit()
-            return WosLink(row[0], ts, guild_id, alliance_id, discord_id, wos_id, wos_name, 'active')
+            return WosLink(row[0], ts, guild_id, alliance_id, discord_id, wos_id, wos_name, status)
         finally:
             if c: c.close()
 
@@ -489,7 +489,7 @@ class Sqlite3DB(DatabaseInterface):
     async def get_alliances(
             self,
             id_: int | list[int] | None = None, code: str | None = None, name: str | None = None, state: int | None = None, guild_id: str | None = None,
-            limit: int | None = None) -> list[Alliance]:
+            limit: int | None = None, show_softlinks=False) -> list[Alliance]:
         c = None
         try:
             c = self.__con.cursor()
@@ -513,6 +513,11 @@ class Sqlite3DB(DatabaseInterface):
 
             where_query = ''
             if len(where_clauses) > 0: where_query = ' WHERE ' + ' AND '.join(where_clauses)
+
+            if not show_softlinks:
+                if len(where_query) > 0: where_query += 'AND code != ? '
+                else: where_query += ' WHERE code != ?'
+                values.append('__softlink__')
 
             limit_query = ''
             if limit and limit > 0:

@@ -3,7 +3,6 @@ from discordHandler import DiscordClient
 from models.wos_link import WosLink
 from services import get_services
 from tickers.giftcodes import process_valid_giftcodes
-from utils.discord_utils import auto_close_interaction_callback
 from utils.wos_api_utils import redeem_code
 
 async def giftcode_add(client: DiscordClient, interaction: Interaction, code: str):
@@ -16,7 +15,7 @@ async def giftcode_add(client: DiscordClient, interaction: Interaction, code: st
 
     services = get_services()
 
-    wos_link = await services.database.get_wos_links(guild_id=str(guild.id), discord_id=str(member.id), status='active')
+    wos_link = await services.database.get_wos_links(guild_id=str(guild.id), discord_id=str(member.id), status=['active', 'unlinked', 'softlink'])
 
     for i in wos_link:
         if i.alliance_id:
@@ -27,7 +26,7 @@ async def giftcode_add(client: DiscordClient, interaction: Interaction, code: st
         await interaction.response.send_message(f'Unable to find a connected WOS account with an alliance', ephemeral=True)
         return  
 
-    alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1)
+    alliance = await services.database.get_alliances(id_=wos_link.alliance_id, limit=1, show_softlinks=True)
     alliance = alliance[0] if len(alliance) == 1 else None
     if not alliance:
         await interaction.response.send_message(f'WOS account bound to unknown alliance', ephemeral=True)

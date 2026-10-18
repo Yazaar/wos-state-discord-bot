@@ -91,7 +91,7 @@ class DatabaseInterface(ABC):
     async def get_alliances(
             self,
             id_: int | list[int] | None = None, code: str | None = None, name: str | None = None, state: int | None = None, guild_id: str | None = None,
-            limit: int | None = None) -> list[Alliance]:
+            limit: int | None = None, show_softlinks=False) -> list[Alliance]:
         pass
 
     @abstractmethod
@@ -159,7 +159,7 @@ class DatabaseInterface(ABC):
         pass
 
     @abstractmethod
-    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str) -> WosLink:
+    async def register_wos_link(self, guild_id: str, alliance_id: int | None, discord_id: str, wos_id: str, wos_name: str, *, status='active') -> WosLink:
         pass
 
     @abstractmethod

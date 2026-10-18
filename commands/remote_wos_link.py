@@ -25,12 +25,13 @@ async def clear_wos_link(client: DiscordClient, interaction: Interaction, wos_ac
     
     services = get_services()
 
-    wos_link = await services.database.get_wos_links(wos_id=wos_account_id, guild_id=str(guild.id), status='active', limit=1)
-    wos_link = wos_link[0] if len(wos_link) == 1 else None
+    wos_links = await services.database.get_wos_links(wos_id=wos_account_id, guild_id=str(guild.id), status=['active', 'unlinked'])
 
-    if not wos_link:
-        await interaction.response.send_message(f'Unable to find a WOS Link for account `{wos_account_id}`', ephemeral=True)
+    if len(wos_links) == 0:
+        await interaction.response.send_message(f'Unable to find a WOS links for account `{wos_account_id}`', ephemeral=True)
         return
 
-    await services.database.update_wos_link(wos_link=wos_link, status='inactive')
-    await interaction.response.send_message(f'WOS Link for account `{wos_account_id}` is now cleared and can be claimed by a new discord user', ephemeral=True)
+    for wos_link in wos_links:
+        await services.database.update_wos_link(wos_link=wos_link, status='inactive')
+
+    await interaction.response.send_message(f'WOS links for account `{wos_account_id}` is now cleared and can be claimed by a new discord user', ephemeral=True)

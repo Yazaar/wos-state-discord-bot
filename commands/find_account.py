@@ -23,6 +23,7 @@ async def find_account(client: DiscordClient, interaction: Interaction, discord:
         guild_id=guild_id,
         discord_id=str(discord.id) if discord else None,
         wos_id=wos_id, wos_name=wos_name,
+        status=['active', 'unlinked'],
         mode=['guild-search', 'wos-name-nocase']
     )
 
